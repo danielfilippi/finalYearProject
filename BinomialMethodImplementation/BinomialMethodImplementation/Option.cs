@@ -159,7 +159,7 @@ namespace BinomialMethodImplementation
         }
         private static double Binomial(int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
         {
-            double TimePerStep = TimeToMaturity / Steps;
+            double TimePerStep = TimeToMaturity / Steps;//More like TimeInDaysPerStep
             double upvalue = Math.Exp(Volatility * Math.Sqrt(TimePerStep));
             double downvalue = 1 / upvalue;
             double p = (Math.Exp(RiskFreeRate * TimePerStep) - downvalue) / (upvalue - downvalue);
