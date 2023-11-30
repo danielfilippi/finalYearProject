@@ -133,6 +133,7 @@ namespace BinomialMethodImplementation
             double price_up = BinomialWithDividends(Steps, Spot + deltaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
             //Calculate Delta
             delta = (price_up - OptionValueWithIV) / deltaSpot;
+            if (delta > 0.99999) delta = 1;
         }
         public static void SetGamma() //Rate of change of Delta for unit change in underlyings value -Approximated by recalculating delta for small changes in asset price and obsering rate of change
         {
@@ -172,7 +173,8 @@ namespace BinomialMethodImplementation
             double priceHigherVol = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility + vegaVol, TimeToMaturity, PutCall, EuroAme);
             double priceOriginal = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
             vega = ((priceHigherVol - priceOriginal) / vegaVol)/100;
-        }
+            if (vega < 0.000001) vega = 0;
+        } 
         private static void SetRho()//Sensitivity of option price to changes in risk free rate. Approximated by altering rfr and assessing change in option value
         {
             double rhoRate = 0.1;

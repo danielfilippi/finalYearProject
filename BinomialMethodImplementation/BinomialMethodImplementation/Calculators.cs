@@ -8,9 +8,9 @@ namespace BinomialMethodImplementation
 {
     internal class Calculators
     {
-        public static double CalculateImpliedVolatility(double annualVolatility, double marketPrice, double S, double K, double T, double r, bool isCall)
+        public static double CalculateImpliedVolatility(double XDayVolatility, double marketPrice, double S, double K, double T, double r, bool isCall)
         {
-            double sigma = annualVolatility; // initial guess for volatility, 
+            double sigma = XDayVolatility; // initial guess for Ivolatility, 
             double sigmaPrev = 0;
             double tolerance = 1e-5;
             int maxIterations = 100;
@@ -24,7 +24,7 @@ namespace BinomialMethodImplementation
                 double optionPrice = isCall ? S * NormCDF(d1) - K * Math.Exp(-r * T) * NormCDF(d2) : K * Math.Exp(-r * T) * NormCDF(-d2) - S * NormCDF(-d1);
                 double vega = S * Math.Sqrt(T) * NormPDF(d1);
 
-                sigma -= (optionPrice - marketPrice) / vega; // Newton-Raphson iteration
+                sigma -= (optionPrice - marketPrice) / vega; //Newton-Raphson formula
                 iterations++;
             }
 

@@ -11,7 +11,6 @@ string Symbol = Console.ReadLine();
 Option a = new Option(Symbol);
 Console.WriteLine(a);
 
-
 //AMERICAN OPTIONS DONE
 //IV CALCULATION DONE
 //REAL TIME DATA DONE
@@ -20,3 +19,14 @@ Console.WriteLine(a);
 //INTEREST RATE CHANGES TODO
 //HISTORICAL VOLATILITY ANALYSIS HALF DONE
 //SCENARIO ANALYSIS TODO e.g allowing users to see how the option's value would change under different market conditions (e.g., a significant drop in the stock market).
+
+
+
+
+
+
+
+
+
+
+//Try this: aapl, strike 150. Will return all NaN?? issue with iv calcuation, converges to -inf
