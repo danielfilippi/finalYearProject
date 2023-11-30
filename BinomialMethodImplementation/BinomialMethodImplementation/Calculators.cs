@@ -64,20 +64,20 @@ namespace BinomialMethodImplementation
         public async static Task<double> GetVolatilityDataAtAppropriateTimeframe(string Symbol, int days)
         {
             string interval=""; //adapting data granularity for option length. a yearly volatility variable for a weekly option is not too good
-            if(days > 1825)
-            {
-                interval = "1mo";
-            }
-            else if (days > 30 && days <= 1825)
+            if(days > 600)
             {
                 interval = "1d";
             }
-            else if (days <= 30)
+            else if (days > 50 && days <= 600)
+            {
+                interval = "1h";
+            }
+            else if (days <= 50)
             {
                 interval = "15m";
             }
             var client = new HttpClient();
-            string uri = "https://mboum-finance.p.rapidapi.com/hi/history?symbol=" + Symbol + "&interval="+ interval +"&diffandsplits=false";
+            string uri = "https://yahoo-finance127.p.rapidapi.com/historic/"+Symbol+"/"+interval+"/"+days+"d";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -85,7 +85,7 @@ namespace BinomialMethodImplementation
                 Headers =
                 {
                     { "X-RapidAPI-Key", "33c2bbacf2msh125241b72a73a14p125482jsna4e4a00dcae6" },
-                    { "X-RapidAPI-Host", "mboum-finance.p.rapidapi.com" },
+                    { "X-RapidAPI-Host", "yahoo-finance127.p.rapidapi.com" },
                 },
             };
 
@@ -94,20 +94,14 @@ namespace BinomialMethodImplementation
                 response.EnsureSuccessStatusCode();
                 var body = await response.Content.ReadAsStringAsync();
 
-                //parse the JSON response
+                //parse the JSON response //prioritise adjclose, fallback to close if intraday data
                 var jsonResponse = JObject.Parse(body);
-                var endDate = DateTime.Now;
-                var startDate = endDate.AddDays(-days); //Option maturity length - days backwards
-                var closingPrices = jsonResponse["body"]
-                    .Children()
-                    .Select(token => new
-                    {
-                        Date = DateTime.ParseExact((string)token.First()["date"], "dd-MM-yyyy", CultureInfo.InvariantCulture),
-                        Close = (double)token.First()["close"]
-                    })
-                    .Where(x => x.Date >= startDate && x.Date <= endDate)
-                     .Select(x => x.Close)
-                     .ToList();
+                JToken closeData = jsonResponse["indicators"]["adjclose"][0]["adjclose"] ?? jsonResponse["indicators"]["quote"][0]["close"];
+
+                var closingPrices = closeData
+                    .Where(closeValue => closeValue.Type != JTokenType.Null) //ignore null values
+                    .Select(closeValue => (double)closeValue) // Convert to double
+                    .ToList();
 
                 return CalculateVolatility(closingPrices, interval);
             }
@@ -131,7 +125,7 @@ namespace BinomialMethodImplementation
             double annualiseVolatility = 0;
             if (interval == "1d") annualiseVolatility = Math.Sqrt(252); //assuming 252 trading days py
             else if (interval == "15m") annualiseVolatility = Math.Sqrt(252 * 26); //Assuming 6.5 trading hours per day
-            else if (interval == "3mo") annualiseVolatility = Math.Sqrt(12);
+            else if (interval == "1h") annualiseVolatility = Math.Sqrt(252*6.5);
             return standardDeviation * annualiseVolatility; 
         }
 

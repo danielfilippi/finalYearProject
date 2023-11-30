@@ -16,6 +16,7 @@ namespace BinomialMethodImplementation
         private static int Steps;
         private static double TimeToMaturity;
 
+
         private static double Spot;
         private static double Strike;
 
@@ -68,7 +69,9 @@ namespace BinomialMethodImplementation
         {
             days = GetDaysToMaturity();
             underlying = new Stock(Symbol, days);
+            Thread.Sleep(1000);
             Spot = underlying.GetValue();
+            Thread.Sleep(1000);
             Strike = GetStrikePrice();
             Volatility = underlying.GetVolatility();
             RiskFreeRate = 0.05;
@@ -78,9 +81,9 @@ namespace BinomialMethodImplementation
             Steps = days * 5; //High resolution model
 
             //FIRST WE CALCULATE THE THEORETICAL OPTION VALUE - THEN WE CAN DERIVE THE IV FROM It
-            TheoreticalValue = Binomial(Steps, Spot, Strike, RiskFreeRate, Volatility, TimeToMaturity, PutCall, EuroAme);
+            TheoreticalValue = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, Volatility, TimeToMaturity, PutCall, EuroAme);
             ImpliedVolatility = Calculators.CalculateImpliedVolatility(Volatility, TheoreticalValue, Spot, Strike, TimeToMaturity, RiskFreeRate, call);
-            OptionValueWithIV = Binomial(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            OptionValueWithIV = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
             FindBreakEven();
             FindMaxLoss();
             FindMaxProfit();
@@ -281,12 +284,13 @@ namespace BinomialMethodImplementation
             }
             return ReversedTree[0, 0];
         }
-        private double BinomialWithDiscreetDividends(Dictionary<int, double> Dividends, int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
+        //continuous dividend model as discreet is out of my realm ofpossibility i think
+        private double BinomialWithDividends(int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
         {
-            double DaysPerStep = TimeToMaturity / Steps;
-            double upvalue = Math.Exp(Volatility * Math.Sqrt(DaysPerStep));
+            double TimePerStep = TimeToMaturity / Steps;//More like TimeInDaysPerStep
+            double upvalue = Math.Exp(Volatility * Math.Sqrt(TimePerStep));
             double downvalue = 1 / upvalue;
-            double p = (Math.Exp(RiskFreeRate * DaysPerStep) - downvalue) / (upvalue - downvalue);
+            double p = (Math.Exp((RiskFreeRate - underlying.GetDividendYield()/100) * TimePerStep) - downvalue) / (upvalue - downvalue);
 
             //BUILD TREE
 
@@ -295,11 +299,9 @@ namespace BinomialMethodImplementation
             for (int i = 1; i <= Steps; i++)
             {
                 Tree[i, 0] = Tree[i - 1, 0] * upvalue;
-                if (Dividends.ContainsKey(i)) Tree[i, 0] -= Dividends[i]; //Adjusting for dividends at ex-dividend date
                 for (int j = 1; j <= i; j++)
                 {
                     Tree[i, j] = Tree[i - 1, j - 1] * downvalue;
-                    if (Dividends.ContainsKey(i)) Tree[i, j] -= Dividends[i];
                 }
             }
 
@@ -318,11 +320,11 @@ namespace BinomialMethodImplementation
             {
                 for (int j = 0; j <= Steps - 1; j++)
                 {
-                    if (EuroAme == 'E') ReversedTree[i, j] = Math.Exp(-RiskFreeRate * DaysPerStep) * (p * ReversedTree[i + 1, j] + (1 - p) * ReversedTree[i + 1, j + 1]);
+                    if (EuroAme == 'E') ReversedTree[i, j] = Math.Exp(-RiskFreeRate * TimePerStep) * (p * ReversedTree[i + 1, j] + (1 - p) * ReversedTree[i + 1, j + 1]);
                     else if (EuroAme == 'A')
                     {
-                        if (PutCall == 'P') ReversedTree[i, j] = Math.Max(Strike - Tree[i, j], Math.Exp(-RiskFreeRate * DaysPerStep) * (p * ReversedTree[i + 1, j] + (1 - p) * ReversedTree[i + 1, j + 1]));
-                        else if (PutCall == 'C') ReversedTree[i, j] = Math.Max(Tree[i, j] - Strike, Math.Exp(-RiskFreeRate * DaysPerStep) * (p * ReversedTree[i + 1, j] + (1 - p) * ReversedTree[i + 1, j + 1]));
+                        if (PutCall == 'P') ReversedTree[i, j] = Math.Max(Strike - Tree[i, j], Math.Exp(-RiskFreeRate * TimePerStep) * (p * ReversedTree[i + 1, j] + (1 - p) * ReversedTree[i + 1, j + 1]));
+                        else if (PutCall == 'C') ReversedTree[i, j] = Math.Max(Tree[i, j] - Strike, Math.Exp(-RiskFreeRate * TimePerStep) * (p * ReversedTree[i + 1, j] + (1 - p) * ReversedTree[i + 1, j + 1]));
                     }
                 }
             }
