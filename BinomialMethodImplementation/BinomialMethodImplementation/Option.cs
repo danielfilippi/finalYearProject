@@ -36,7 +36,7 @@ namespace BinomialMethodImplementation
         private static bool call;
 
 
-        public static double theta;
+        
         public static double thetaDecayDays;
         public double ValueAfterDaysOfTimeDecay;
 
@@ -51,6 +51,11 @@ namespace BinomialMethodImplementation
         public static double Margin;
         public static double UnderlyingOwned;
 
+        public static double delta;
+        public static double gamma;
+        public static double theta;
+        public static double vega;
+        public static double rho;
 
         public Stock underlying;
 
@@ -89,10 +94,11 @@ namespace BinomialMethodImplementation
             FindMaxProfit();
             FindNetDebCred();
             FindPossibleMargin();
+            GetGreeks();
             
             
-            SetTheta();
-            //ValueAfterDaysOfTimeDecay = SetThetaDecay(ValueWithIV);
+            //SetTheta();
+            //ValueAfterDaysOfTimeDecay = SetThetaDecay(OptionValueWithIV);
         }
         private static void FindPossibleMargin()//margin possible if user doesnt own underlying asset
         {
@@ -111,6 +117,66 @@ namespace BinomialMethodImplementation
                 }
             }
             return;
+        }
+        public static void GetGreeks()
+        {
+            SetDelta();
+            SetGamma();
+            SetTheta();
+            SetVega();
+            SetRho();
+        }
+        public static void SetDelta() //rate of change in options price per unit change in underlying price.  Approximated by changing spot price slightly and noting change in option price
+        {
+            double deltaSpot = 0.01;
+            // Calculate the option price for an increased spot price
+            double price_up = BinomialWithDividends(Steps, Spot + deltaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            //Calculate Delta
+            delta = (price_up - OptionValueWithIV) / deltaSpot;
+        }
+        public static void SetGamma() //Rate of change of Delta for unit change in underlyings value -Approximated by recalculating delta for small changes in asset price and obsering rate of change
+        {
+            double gammaSpot = 0.01;
+            double price_up = BinomialWithDividends(Steps, Spot + gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            double price_down = BinomialWithDividends(Steps, Spot + gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            gamma = (price_up - 2 * OptionValueWithIV + price_down) / Math.Pow(gammaSpot, 2);
+        }
+        private static void SetTheta() //Rate of change in options price with respect to time. Time decay. Approximated by changing expiry by a small amount and noting the change in option price
+        {
+            double adjustedTTM = TimeToMaturity - (1 / 365.25);
+            theta = (BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, adjustedTTM, PutCall, EuroAme) - OptionValueWithIV) / (1 / 365.25);
+        }
+        private static double SetThetaDecay(double OptionValue)
+        {
+            Console.WriteLine("Enter amount of days by which you'd like to simulate the effect of time decay on the options price.\n" +
+                                        "For example, if you want to estimate the effect of one days worth of time decay (a common analysis), set this to 1.\n" +
+                                        "If you're interested in the effect of time decay over a specific number of days, such as a week or a month, enter that number.\n" +
+                                        "If the option is nearing its expiration and you want to understand the impact of time decay as expiration approaches, you can set this to the number of days left until expiration.\n\n");
+            while (true)
+            {
+                Console.WriteLine("Enter desired days to decay: ");
+                string input = Console.ReadLine();
+                if (double.TryParse(input, out double thetaDays))
+                {
+                    if (thetaDays > 0 && thetaDays < days) return SetThetaDecayOptionValue(OptionValue, thetaDays);
+                    else Console.WriteLine("Theta must be above zero and less than the amount of days to maturity");
+                }
+                else Console.WriteLine("Invalid input. Please enter a numeric value.");
+            }
+        }
+        private static void SetVega()//Sensitivity of the option price to changes in volatility of underlying. Approximated by altering volatility and observing change in price
+        {
+            double vegaVol = 0.01;
+            double priceHigherVol = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility + vegaVol, TimeToMaturity, PutCall, EuroAme);
+            double priceOriginal = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            vega = (priceHigherVol - priceOriginal) / vegaVol;
+        }
+        private static void SetRho()//Sensitivity of option price to changes in risk free rate. Approximated by altering rfr and assessing change in option value
+        {
+            double rhoRate = 0.1;
+            double priceHigherRate = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate + rhoRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            double priceOriginal = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            rho = (priceHigherRate - priceOriginal) / rhoRate;
         }
         private static void FindNetDebCred()
         {
@@ -140,29 +206,8 @@ namespace BinomialMethodImplementation
             if (call) BreakEvenPoint = Strike + OptionValueWithIV;
             if (!call) BreakEvenPoint = Strike - OptionValueWithIV;
         }
-        private static void SetTheta() //one day theta 
-        {
-            double adjustedTTM = TimeToMaturity - (1 / 365.25);
-            theta = -(OptionValueWithIV - Binomial(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, adjustedTTM, PutCall, EuroAme));
-        }
-        private static double SetThetaDecay(double OptionValue)
-        {
-            Console.WriteLine("Enter amount of days by which you'd like to simulate the effect of time decay on the options price.\n" +
-                                        "For example, if you want to estimate the effect of one days worth of time decay (a common analysis), set this to 1.\n" +
-                                        "If you're interested in the effect of time decay over a specific number of days, such as a week or a month, enter that number.\n" +
-                                        "If the option is nearing its expiration and you want to understand the impact of time decay as expiration approaches, you can set this to the number of days left until expiration.\n\n");
-            while (true)
-            {
-                Console.WriteLine("Enter desired days to decay: ");
-                string input = Console.ReadLine();
-                if (double.TryParse(input, out double thetaDays))
-                {
-                    if (thetaDays > 0 && thetaDays < days) return SetThetaDecayOptionValue(OptionValue, thetaDays);
-                    else Console.WriteLine("Theta must be above zero and less than the amount of days to maturity");
-                }
-                else Console.WriteLine("Invalid input. Please enter a numeric value.");
-            }
-        }
+       
+       
         private static double SetThetaDecayOptionValue(double optionValue, double thetaDays)
         {
             thetaDecayDays = thetaDays;
@@ -228,7 +273,7 @@ namespace BinomialMethodImplementation
                            "Risk Free Rate: " + RiskFreeRate + "\n" +
                            "Implied Volatility: " + ImpliedVolatility + "\n" +
                            "Option Value: " + OptionValueWithIV + "\n" +
-                           "One day theta: " + theta + "\n" +
+                           //"One day theta: " + theta + "\n" +
                            //"Option value after " + thetaDecayDays + " days of theta decay: " + ValueAfterDaysOfTimeDecay + "\n"
                            "Break even point: " + BreakEvenPoint + " " + underlying.GetCurrency() + "\n" +
                            "Max Win: " + MaxWinString + "\n" +
@@ -285,7 +330,7 @@ namespace BinomialMethodImplementation
             return ReversedTree[0, 0];
         }
         //continuous dividend model as discreet is out of my realm ofpossibility i think
-        private double BinomialWithDividends(int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
+        private static double BinomialWithDividends(int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
         {
             double TimePerStep = TimeToMaturity / Steps;//More like TimeInDaysPerStep
             double upvalue = Math.Exp(Volatility * Math.Sqrt(TimePerStep));
