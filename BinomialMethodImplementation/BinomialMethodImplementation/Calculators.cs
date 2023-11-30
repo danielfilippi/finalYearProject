@@ -80,7 +80,7 @@ namespace BinomialMethodImplementation
                 response.EnsureSuccessStatusCode();
                 var body = await response.Content.ReadAsStringAsync();
 
-                // Parse the JSON response
+                //parse the JSON response
                 var jsonResponse = JObject.Parse(body);
                 var closingPrices = jsonResponse["body"]
                     .Children()
@@ -92,7 +92,7 @@ namespace BinomialMethodImplementation
         }
         private static double CalculateAnnualVolatility(List<double> closingPrices)
         {
-            // Ensure we have at least two days of data to calculate returns
+            //ensure we have at least two days of data to calculate returns
             if (closingPrices.Count < 2) throw new InvalidOperationException("Insufficient data for volatility calculation.");
 
             var dailyReturns = new List<double>();
@@ -103,7 +103,7 @@ namespace BinomialMethodImplementation
             }
 
             double standardDeviation = CalculateStandardDeviation(dailyReturns);
-            return standardDeviation * Math.Sqrt(252); // Assuming 252 trading days in a year
+            return standardDeviation * Math.Sqrt(252); //assuming 252 trading days py
         }
 
 

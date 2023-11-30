@@ -26,10 +26,11 @@ namespace BinomialMethodImplementation
         //If the original volatility and the derived IV are very close to each other is a good sign. It suggests that the IV calculation is aligning well with the market conditions as reflected in the original model.
 
         public static double TheoreticalValue;
-        public static double ValueWithIV;
+        public static double OptionValueWithIV;
 
         public static char EuroAme;
         public static char PutCall;
+        public static char LongShort;
 
         private static bool call;
 
@@ -37,6 +38,13 @@ namespace BinomialMethodImplementation
         public static double theta;
         public static double thetaDecayDays;
         public double ValueAfterDaysOfTimeDecay;
+
+        public static double BreakEvenPoint;
+        public static double MaxWin;
+        public static double MaxLoss;
+        public static double NetDebit;
+        public static double NetCredit;
+        public static double Margin;
 
 
         public Stock underlying;
@@ -68,14 +76,48 @@ namespace BinomialMethodImplementation
             //FIRST WE CALCULATE THE THEORETICAL OPTION VALUE - THEN WE CAN DERIVE THE IV FROM It
             TheoreticalValue = Binomial(Steps, Spot, Strike, RiskFreeRate, Volatility, TimeToMaturity, PutCall, EuroAme);
             ImpliedVolatility = Calculators.CalculateImpliedVolatility(Volatility, TheoreticalValue, Spot, Strike, TimeToMaturity, RiskFreeRate, call);
-            ValueWithIV = Binomial(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            OptionValueWithIV = Binomial(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            FindBreakEven();
+            FindMaxLoss();
+            FindMaxProfit();
+            FindNetDebCred();
+            
+            
             SetTheta();
-            ValueAfterDaysOfTimeDecay = SetThetaDecay(ValueWithIV);
+            //ValueAfterDaysOfTimeDecay = SetThetaDecay(ValueWithIV);
+        }
+        private static void FindNetDebCred()
+        {
+            if (LongShort == 'L') NetDebit = OptionValueWithIV; //buy option you are giving money
+            else NetCredit = OptionValueWithIV;  //selling option you are receiving money
+        }
+        private static void FindMaxProfit() //for 1 share, not 100
+        {
+            if (LongShort == 'L')
+            {
+                if (PutCall == 'C') MaxWin = -1; //Unlimited
+                else if (PutCall == 'P') MaxWin = Strike - OptionValueWithIV;
+            }
+            else MaxWin = OptionValueWithIV;
+        }
+        private static void FindMaxLoss() //Just copy above function and change L to S. Put-call parity
+        {
+            if (LongShort == 'S')
+            {
+                if (PutCall == 'C') MaxLoss = -1; //Unlimited
+                else if (PutCall == 'P') MaxLoss = Strike - OptionValueWithIV;
+            }
+            else MaxLoss = OptionValueWithIV;
+        }
+        private static void FindBreakEven()
+        {
+            if (call) BreakEvenPoint = Strike + OptionValueWithIV;
+            if (!call) BreakEvenPoint = Strike = OptionValueWithIV;
         }
         private static void SetTheta() //one day theta 
         {
             double adjustedTTM = TimeToMaturity - (1 / 365.25);
-            theta = -(ValueWithIV - Binomial(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, adjustedTTM, PutCall, EuroAme));
+            theta = -(OptionValueWithIV - Binomial(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, adjustedTTM, PutCall, EuroAme));
         }
         private static double SetThetaDecay(double OptionValue)
         {
@@ -107,6 +149,8 @@ namespace BinomialMethodImplementation
         }
         private static void GetNatureOfOption()
         {
+            Console.WriteLine("L for Long (Buy option), S for Short (Sell option). Caps don't matter");
+            LongShort = char.Parse(Console.ReadLine().ToUpper());
             Console.WriteLine("E for European, A for American. Caps don't matter");
             EuroAme = char.Parse(Console.ReadLine().ToUpper());
             Console.WriteLine("P for Put, C for Call. Caps don't matter");
@@ -146,15 +190,26 @@ namespace BinomialMethodImplementation
 
         public override string ToString()
         {
+            string MaxWinString = MaxWin.ToString();
+            if (MaxWinString == "-1") MaxWinString = "Unlimited";
+            string MaxLossString = MaxLoss.ToString();
+            if (MaxLossString == "-1") MaxLossString = "Unlimited";
+
             string o = EuroAme.ToString() + " " + PutCall.ToString() + " " + underlying.GetSym() + "\n" +
                            "Maturity date (days away): " + days + "\n" +
-                           "Spot price: " + Spot + " " + underlying.GetCurrency() + "\n" +
+                           "Spot price: " + Spot + " " + underlying.GetCurrency() + "\n" + 
                            "Strike price: " + Strike + "\n" +
                            "Risk Free Rate: " + RiskFreeRate + "\n" +
                            "Implied Volatility: " + ImpliedVolatility + "\n" +
-                           "Option Value: " + ValueWithIV + "\n" +
+                           "Option Value: " + OptionValueWithIV + "\n" +
                            "One day theta: " + theta + "\n" +
-                           "Option value after " + thetaDecayDays + " days of theta decay: " + ValueAfterDaysOfTimeDecay + "\n";
+                           //"Option value after " + thetaDecayDays + " days of theta decay: " + ValueAfterDaysOfTimeDecay + "\n"
+                           "Break even point: " + BreakEvenPoint + " " + underlying.GetCurrency() + "\n" +
+                           "Max Win: " + MaxWinString + "\n" +
+                           "Max Loss: " + MaxLossString + "\n" +
+                           "Net Debit: " + NetDebit + "\n" +
+                           "Net Credit: " + NetCredit + "\n";
+                            
             return o;
         }
         private static double Binomial(int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
