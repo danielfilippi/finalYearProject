@@ -137,13 +137,10 @@ namespace BinomialMethodImplementation
         public static void SetGamma() //Rate of change of Delta for unit change in underlyings value -Approximated by recalculating delta for small changes in asset price and obsering rate of change
         {
             double gammaSpot = 0.01;
-            double price_up = BinomialWithDividends(Steps, Spot + gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
             double price_down = BinomialWithDividends(Steps, Spot - gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
-            //calculate Delta for the higher and lower prices
-            double delta_up = (price_up - OptionValueWithIV) / gammaSpot;
+            //calculate Delta for the lower price
             double delta_down = (OptionValueWithIV - price_down) / gammaSpot;
-
-            gamma = (delta_up - delta_down) / gammaSpot*100000000;
+            gamma = (delta- delta_down) / (2* gammaSpot);
         }
         private static void SetTheta() //Rate of change in options price with respect to time. Time decay. Approximated by changing expiry by a small amount and noting the change in option price
         {
