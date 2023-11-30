@@ -96,7 +96,9 @@ namespace BinomialMethodImplementation
 
                 //parse the JSON response //prioritise adjclose, fallback to close if intraday data
                 var jsonResponse = JObject.Parse(body);
-                JToken closeData = jsonResponse["indicators"]["adjclose"][0]["adjclose"] ?? jsonResponse["indicators"]["quote"][0]["close"];
+                JToken closeData = null;
+                if (interval == "1d") closeData = jsonResponse["indicators"]["adjclose"][0]["adjclose"];
+                else closeData = jsonResponse["indicators"]["quote"][0]["close"];
 
                 var closingPrices = closeData
                     .Where(closeValue => closeValue.Type != JTokenType.Null) //ignore null values
