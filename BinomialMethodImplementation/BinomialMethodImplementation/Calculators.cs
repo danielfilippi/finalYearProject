@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
+using System.Globalization;
 
 
 
@@ -60,10 +61,23 @@ namespace BinomialMethodImplementation
             return Math.Exp(-x * x / 2) / Math.Sqrt(2 * Math.PI);
         }
 
-        public async static Task<double> GetAnnualVolatility(string Symbol)
+        public async static Task<double> GetVolatilityDataAtAppropriateTimeframe(string Symbol, int days)
         {
+            string interval=""; //adapting data granularity for option length. a yearly volatility variable for a weekly option is not too good
+            if(days > 1825)
+            {
+                interval = "1mo";
+            }
+            else if (days > 30 && days <= 1825)
+            {
+                interval = "1d";
+            }
+            else if (days <= 30)
+            {
+                interval = "15m";
+            }
             var client = new HttpClient();
-            string uri = "https://mboum-finance.p.rapidapi.com/hi/history?symbol=" + Symbol + "&interval=1d&diffandsplits=false";
+            string uri = "https://mboum-finance.p.rapidapi.com/hi/history?symbol=" + Symbol + "&interval="+ interval +"&diffandsplits=false";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -82,28 +96,43 @@ namespace BinomialMethodImplementation
 
                 //parse the JSON response
                 var jsonResponse = JObject.Parse(body);
+                var endDate = DateTime.Now;
+                var startDate = endDate.AddDays(-days); //Option maturity length - days backwards
                 var closingPrices = jsonResponse["body"]
                     .Children()
-                    .Select(token => (double)token.First()["close"])
-                    .ToList();
+                    .Select(token => new
+                    {
+                        Date = DateTime.ParseExact((string)token.First()["date"], "dd-MM-yyyy", CultureInfo.InvariantCulture),
+                        Close = (double)token.First()["close"]
+                    })
+                    .Where(x => x.Date >= startDate && x.Date <= endDate)
+                     .Select(x => x.Close)
+                     .ToList();
 
-                return CalculateAnnualVolatility(closingPrices);
+                return CalculateVolatility(closingPrices, interval);
             }
+
         }
-        private static double CalculateAnnualVolatility(List<double> closingPrices)
+
+        //here im calculating the volatility for the exact number of days in the past that the option is going to last
+        private static double CalculateVolatility(List<double> closingPrices, string interval)
         {
             //ensure we have at least two days of data to calculate returns
             if (closingPrices.Count < 2) throw new InvalidOperationException("Insufficient data for volatility calculation.");
 
-            var dailyReturns = new List<double>();
+            var intervalReturns = new List<double>();
             for (int i = 1; i < closingPrices.Count; i++)
             {
-                double dailyReturn = (closingPrices[i] - closingPrices[i - 1]) / closingPrices[i - 1];
-                dailyReturns.Add(dailyReturn);
+                double intervalReturn = (closingPrices[i] - closingPrices[i - 1]) / closingPrices[i - 1];
+                intervalReturns.Add(intervalReturn);
             }
 
-            double standardDeviation = CalculateStandardDeviation(dailyReturns);
-            return standardDeviation * Math.Sqrt(252); //assuming 252 trading days py
+            double standardDeviation = CalculateStandardDeviation(intervalReturns);
+            double annualiseVolatility = 0;
+            if (interval == "1d") annualiseVolatility = Math.Sqrt(252); //assuming 252 trading days py
+            else if (interval == "15m") annualiseVolatility = Math.Sqrt(252 * 26); //Assuming 6.5 trading hours per day
+            else if (interval == "3mo") annualiseVolatility = Math.Sqrt(12);
+            return standardDeviation * annualiseVolatility; 
         }
 
 

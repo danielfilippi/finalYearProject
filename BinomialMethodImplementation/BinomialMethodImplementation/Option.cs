@@ -39,12 +39,16 @@ namespace BinomialMethodImplementation
         public static double thetaDecayDays;
         public double ValueAfterDaysOfTimeDecay;
 
+        public static double UserSetMargin;
+        public static double UserSetAdditionalMargin;
+
         public static double BreakEvenPoint;
         public static double MaxWin;
         public static double MaxLoss;
         public static double NetDebit;
         public static double NetCredit;
         public static double Margin;
+        public static double UnderlyingOwned;
 
 
         public Stock underlying;
@@ -62,11 +66,11 @@ namespace BinomialMethodImplementation
 
         public Option(string Symbol)
         {
-            underlying = new Stock(Symbol);
             days = GetDaysToMaturity();
+            underlying = new Stock(Symbol, days);
             Spot = underlying.GetValue();
             Strike = GetStrikePrice();
-            Volatility = underlying.GetAnnualVolatility();
+            Volatility = underlying.GetVolatility();
             RiskFreeRate = 0.05;
             GetNatureOfOption();
 
@@ -81,14 +85,33 @@ namespace BinomialMethodImplementation
             FindMaxLoss();
             FindMaxProfit();
             FindNetDebCred();
+            FindPossibleMargin();
             
             
             SetTheta();
             //ValueAfterDaysOfTimeDecay = SetThetaDecay(ValueWithIV);
         }
+        private static void FindPossibleMargin()//margin possible if user doesnt own underlying asset
+        {
+            Margin = 0;
+            Console.WriteLine("Enter your desired base margin percentage: Represented as a number between 0-1");
+            UserSetMargin = double.Parse(Console.ReadLine());
+            Console.WriteLine("Enter your desired additional margin percentage: Represented as a number between 0-1");
+            UserSetAdditionalMargin = double.Parse(Console.ReadLine());
+            if (LongShort == 'S')
+            {
+                Margin += Spot * UserSetMargin;
+                if ((PutCall == 'P' && Strike > Spot) || (PutCall == 'C' && Strike < Spot))
+                {
+                    double outOfTheMoneyAmt = Math.Abs(Spot - Strike);
+                    Margin += outOfTheMoneyAmt * UserSetAdditionalMargin;
+                }
+            }
+            return;
+        }
         private static void FindNetDebCred()
         {
-            if (LongShort == 'L') NetDebit = OptionValueWithIV; //buy option you are giving money
+            if (LongShort == 'L') NetDebit = -OptionValueWithIV; //buy option you are giving money
             else NetCredit = OptionValueWithIV;  //selling option you are receiving money
         }
         private static void FindMaxProfit() //for 1 share, not 100
@@ -112,7 +135,7 @@ namespace BinomialMethodImplementation
         private static void FindBreakEven()
         {
             if (call) BreakEvenPoint = Strike + OptionValueWithIV;
-            if (!call) BreakEvenPoint = Strike = OptionValueWithIV;
+            if (!call) BreakEvenPoint = Strike - OptionValueWithIV;
         }
         private static void SetTheta() //one day theta 
         {
@@ -195,7 +218,7 @@ namespace BinomialMethodImplementation
             string MaxLossString = MaxLoss.ToString();
             if (MaxLossString == "-1") MaxLossString = "Unlimited";
 
-            string o = EuroAme.ToString() + " " + PutCall.ToString() + " " + underlying.GetSym() + "\n" +
+            string o = LongShort.ToString() + "" + EuroAme.ToString() + " " + PutCall.ToString() + " " + underlying.GetSym() + "\n" +
                            "Maturity date (days away): " + days + "\n" +
                            "Spot price: " + Spot + " " + underlying.GetCurrency() + "\n" + 
                            "Strike price: " + Strike + "\n" +
@@ -208,7 +231,8 @@ namespace BinomialMethodImplementation
                            "Max Win: " + MaxWinString + "\n" +
                            "Max Loss: " + MaxLossString + "\n" +
                            "Net Debit: " + NetDebit + "\n" +
-                           "Net Credit: " + NetCredit + "\n";
+                           "Net Credit: " + NetCredit + "\n" +
+                           "Total margin to be paid in stock or cash: " + Margin + "\n";
                             
             return o;
         }

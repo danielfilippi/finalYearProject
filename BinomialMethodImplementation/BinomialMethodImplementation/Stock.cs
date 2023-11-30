@@ -13,16 +13,20 @@ namespace BinomialMethodImplementation
     internal class Stock
     {
         public static string Sym;
+
+        public static int DaysForVolatility;
         public static double Value { get; set; }
 
         public static string Currency { get; set; }
         public static double AnnualVolatility { get; set; }
+        public static double XDaysVolatility { get; set; }
 
-        public Stock(string Symbol)
+        public Stock(string Symbol, int days)
         {
             Sym = Symbol;
             GetGeneralStockData(Symbol);
-            AnnualVolatility = SetAnnualVolatility(Symbol);
+            DaysForVolatility = days;
+            XDaysVolatility = SetVolatility(Symbol, DaysForVolatility);
         }
 
         private async static void GetGeneralStockData(string Symbol)
@@ -50,13 +54,14 @@ namespace BinomialMethodImplementation
                 Currency = data.body.financialCurrency;
             }
         }
-        private static double SetAnnualVolatility(string Symbol)
+
+        private static double SetVolatility(string Symbol, int days)
         {
-            return Calculators.GetAnnualVolatility(Symbol).GetAwaiter().GetResult();
+            return Calculators.GetVolatilityDataAtAppropriateTimeframe(Symbol, days).GetAwaiter().GetResult();
         }
-        public double GetAnnualVolatility()
+        public double GetVolatility()
         {
-            return AnnualVolatility;
+            return XDaysVolatility;
         }
         public double GetValue()
         {
