@@ -57,7 +57,7 @@ namespace BinomialMethodImplementation
         public static double vega;
         public static double rho;
 
-        public Stock underlying;
+        public static Stock underlying;
 
         /*
         days = 200;
@@ -138,13 +138,18 @@ namespace BinomialMethodImplementation
         {
             double gammaSpot = 0.01;
             double price_up = BinomialWithDividends(Steps, Spot + gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
-            double price_down = BinomialWithDividends(Steps, Spot + gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
-            gamma = (price_up - 2 * OptionValueWithIV + price_down) / Math.Pow(gammaSpot, 2);
+            double price_down = BinomialWithDividends(Steps, Spot - gammaSpot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
+            //calculate Delta for the higher and lower prices
+            double delta_up = (price_up - OptionValueWithIV) / gammaSpot;
+            double delta_down = (OptionValueWithIV - price_down) / gammaSpot;
+
+            gamma = (delta_up - delta_down) / gammaSpot*100000000;
         }
         private static void SetTheta() //Rate of change in options price with respect to time. Time decay. Approximated by changing expiry by a small amount and noting the change in option price
         {
-            double adjustedTTM = TimeToMaturity - (1 / 365.25);
-            theta = (BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, adjustedTTM, PutCall, EuroAme) - OptionValueWithIV) / (1 / 365.25);
+            double thetaTime = (0.1 / 365.25);
+            double adjustedTTM = TimeToMaturity -thetaTime;
+            theta = ((BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, adjustedTTM, PutCall, EuroAme) - OptionValueWithIV) / thetaTime)/365.25;
         }
         private static double SetThetaDecay(double OptionValue)
         {
@@ -169,14 +174,14 @@ namespace BinomialMethodImplementation
             double vegaVol = 0.01;
             double priceHigherVol = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility + vegaVol, TimeToMaturity, PutCall, EuroAme);
             double priceOriginal = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
-            vega = (priceHigherVol - priceOriginal) / vegaVol;
+            vega = ((priceHigherVol - priceOriginal) / vegaVol)/100;
         }
         private static void SetRho()//Sensitivity of option price to changes in risk free rate. Approximated by altering rfr and assessing change in option value
         {
             double rhoRate = 0.1;
             double priceHigherRate = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate + rhoRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
             double priceOriginal = BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme);
-            rho = (priceHigherRate - priceOriginal) / rhoRate;
+            rho = ((priceHigherRate - priceOriginal) / rhoRate)/100;
         }
         private static void FindNetDebCred()
         {
@@ -280,8 +285,13 @@ namespace BinomialMethodImplementation
                            "Max Loss: " + MaxLossString + "\n" +
                            "Net Debit: " + NetDebit + "\n" +
                            "Net Credit: " + NetCredit + "\n" +
-                           "Total margin to be paid in stock or cash: " + Margin + "\n";
-                            
+                           "Total margin to be paid in stock or cash: " + Margin + "\n\n" +
+                           "Delta: " + delta + "\n" +
+                           "Gamma: " + gamma + "\n" +
+                           "Theta: " + theta + "\n" +
+                           "Vega: " + vega + "\n" +
+                           "Rho: " + rho + "\n";
+
             return o;
         }
         private static double Binomial(int Steps, double Spot, double Strike, double RiskFreeRate, double Volatility, double TimeToMaturity, char PutCall, char EuroAme)
