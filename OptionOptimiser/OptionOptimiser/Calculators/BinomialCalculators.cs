@@ -62,7 +62,7 @@ namespace OptionOptimiser.Calculators
             double TimePerStep = TimeToMaturity / Steps;//More like TimeInDaysPerStep
             double upvalue = Math.Exp(Volatility * Math.Sqrt(TimePerStep));
             double downvalue = 1 / upvalue;
-            double p = (Math.Exp((RiskFreeRate - underlying.GetDividendYield() / 100) * TimePerStep) - downvalue) / (upvalue - downvalue);
+            double p = (Math.Exp((RiskFreeRate - underlying.GetDividendYield()/100) * TimePerStep) - downvalue) / (upvalue - downvalue);
 
             //BUILD TREE
 

@@ -23,24 +23,33 @@ namespace OptionOptimiser.Calculators
             int maxIterations = 100;
             int iterations = 0;
 
-            while (Math.Abs(sigma - sigmaPrev) > tolerance && iterations < maxIterations)
+            while (Math.Abs(sigma - sigmaPrev) > tolerance || iterations < maxIterations)
             {
                 sigmaPrev = sigma;
                 double binomialPrice = BinomialCalculators.BinomialWithDividends(Steps, Spot, Spot, RiskFreeRate, sigma, TimeToMaturity, PutCall, EuroAme, underlying);
 
                 // Approximate Vega using finite difference
-                double sigmaUp = sigma + 0.5;
-                double priceUp = BinomialCalculators.BinomialWithDividends(Steps, Spot, Spot, RiskFreeRate, sigmaUp, TimeToMaturity, PutCall, EuroAme, underlying);
+                double sigmaUp = sigma + 0.1;
+                double priceUp = BinomialCalculators.BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, sigmaUp, TimeToMaturity, PutCall, EuroAme, underlying);
                 double vega = (priceUp - binomialPrice) / 0.01;
 
                 sigma -= (binomialPrice - TheoreticalValue) / vega; //Newton-Raphson iteration
                 iterations++;
             }
 
+            if (PutCall == 'P') //lets find exactly everything that may support a put. So, key topics: News sentiment, //give everything a weight, then use ml to determine the weights
+            {
+
+            }
+            else
+            {
+
+            }
+
             return sigma;
         }
 
-        public static async Task<List<List<KeyValuePair<int, double>>>> GetVolatilityData(string Symbol)
+        public static async Task<List<List<KeyValuePair<int, double>>>> GetVolatilityData(string Symbol, int x)
 
         {
             List<KeyValuePair<int, double>> volatilityData = new List<KeyValuePair<int, double>>();
@@ -65,13 +74,14 @@ namespace OptionOptimiser.Calculators
             List<KeyValuePair<int, double>> weeklyRollingVolatility = BuildWeeklyRollingVolatilityList(closingPricesHourly);
             List<KeyValuePair<int, double>> monthlyRollingVolatility = BuildMonthlyRollingVolatilityList(closingPricesDaily);
             List<KeyValuePair<int, double>> yearlyRollingVolatility = BuildYearlyRollingVolatilityList(closingPricesDaily);
-
+            List<KeyValuePair<int, double>> xRollingVolatility = BuildXRollingVolatilityList(closingPricesDaily, x);
             List<List<KeyValuePair<int, double>>> allRollingVolatilities = new List<List<KeyValuePair<int, double>>>
             {
                 dailyRollingVolatility,
                 weeklyRollingVolatility,
                 monthlyRollingVolatility,
-                yearlyRollingVolatility
+                yearlyRollingVolatility,
+                xRollingVolatility
             };
             return allRollingVolatilities;
         }
@@ -95,6 +105,21 @@ namespace OptionOptimiser.Calculators
                 .Select(kvp => kvp.Value)
                 .ToList();
         }
+        private static List<KeyValuePair<int, double>> BuildXRollingVolatilityList(List<KeyValuePair<long, double>> dailyData, int x)
+        {
+            var xVolatilityList = new List<KeyValuePair<int, double>>();
+
+            //daily rolling volatility
+            for (int day = 0; day <= 1461; day++) //x day volatiliry
+            {
+                var dataFromDayToPresent = GetDataForRollingWindow(dailyData, day, x);
+                double volatility = CalculateVolatility(dataFromDayToPresent, "1d");
+                xVolatilityList.Add(new KeyValuePair<int, double>(day, volatility));
+            }
+            return xVolatilityList;
+        }
+
+
         private static List<KeyValuePair<int, double>> BuildDailyRollingVolatilityList(List<KeyValuePair<long, double>> quarterHourlyData)
         {
             var dailyVolatilityList = new List<KeyValuePair<int, double>>();

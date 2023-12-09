@@ -18,13 +18,16 @@ namespace OptionOptimiser.Plotters
             for (int day = 1; day <= 35; day++) //4 years exactly (365.25*4) EDIT: Changed to only 30
             {
                 double TimeToMaturity = day / 365.25;
-                int Steps = 500;
-                double TheoreticalValue = BinomialCalculators.BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, optionToAnalyse.AdaptiveVolatility, TimeToMaturity, 'C', EuroAme, underlying);
-                double ImpliedVolatility = VolatilityCalculators.CalculateImpliedVolatility(optionToAnalyse.AdaptiveVolatility, TheoreticalValue, Spot, Spot, TimeToMaturity, RiskFreeRate, 'C' , EuroAme, underlying, Steps);  //spot, spot to calculate iv for at the money call
+                int Steps = 50;
+
+                double Volatility = underlying.ALLVOLATILITIES[4][day].Value;
+
+                double TheoreticalValue = BinomialCalculators.BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, Volatility, TimeToMaturity, 'C', EuroAme, underlying);
+                double ImpliedVolatility = VolatilityCalculators.CalculateImpliedVolatility(Volatility, TheoreticalValue, Spot, Strike, TimeToMaturity, RiskFreeRate, 'C' , EuroAme, underlying, Steps);  //spot, spot to calculate iv for at the money call
 
                 var toAdd = Tuple.Create(day,
                                          BinomialCalculators.BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, 'C', EuroAme, underlying),
-                                         ImpliedVolatility); // Replace 'anotherDoubleValue' with your actual value
+                                         ImpliedVolatility); 
                 DaysandValues.Add(toAdd);
             }
         }

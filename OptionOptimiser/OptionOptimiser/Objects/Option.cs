@@ -68,11 +68,11 @@ namespace OptionOptimiser.Objects
             SetNatureOfOption();
 
             TimeToMaturity = days / 365.25;
-            Steps = days * 5; //High resolution model
+            Steps = days; //High resolution model
 
             //FIRST WE CALCULATE THE THEORETICAL OPTION VALUE - THEN WE CAN DERIVE THE IV FROM It
             TheoreticalValue = BinomialCalculators.BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, AdaptiveVolatility, TimeToMaturity, PutCall, EuroAme, underlying);
-            ImpliedVolatility = VolatilityCalculators.CalculateImpliedVolatility(AdaptiveVolatility, TheoreticalValue, Spot, Spot, TimeToMaturity, RiskFreeRate, PutCall, EuroAme, underlying, Steps);  //spot, spot so at the money option is being used to calc IV
+            ImpliedVolatility = VolatilityCalculators.CalculateImpliedVolatility(AdaptiveVolatility, TheoreticalValue, Spot, Strike, TimeToMaturity, RiskFreeRate, PutCall, EuroAme, underlying, Steps);  
             OptionValueWithIV = BinomialCalculators.BinomialWithDividends(Steps, Spot, Strike, RiskFreeRate, ImpliedVolatility, TimeToMaturity, PutCall, EuroAme, underlying);
             //FINANCIALS
             BreakEvenPoint = FinancialCalculators.FindBreakEven(OptionValueWithIV, Strike, call);
@@ -93,7 +93,7 @@ namespace OptionOptimiser.Objects
         }
         private void SetAdaptiveVolatility()
         {
-            if (days < 7)
+            /*if (days < 7)
             {
                 AdaptiveVolatility = underlying.WeeklyVolatility;
                 AdaptiveString = "Weekly";
@@ -112,7 +112,8 @@ namespace OptionOptimiser.Objects
             {
                 AdaptiveVolatility = underlying.AnnualVolatility;
                 AdaptiveString = "Yearly";
-            }
+            }*/
+            AdaptiveVolatility= underlying.XDaysVolatility;
         }
         private void SetNatureOfOption()
         {

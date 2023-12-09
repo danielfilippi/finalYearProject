@@ -26,7 +26,7 @@ namespace OptionOptimiser.Objects
         public double MonthlyVolatility { get; set; }
         public double WeeklyVolatility { get; set; }
         public double XDaysVolatility { get; set; } //volatility taking into account data since x days ago
-
+        public List<List<KeyValuePair<int, double>>> ALLVOLATILITIES { get; set; }  
 
         public Stock(string Symbol, int days)
         {
@@ -35,10 +35,12 @@ namespace OptionOptimiser.Objects
             //SetDividendYield();
             DaysForVolatility = days;
 
-            DailyVolatility = SetVolatilityData(Symbol)[0][0].Value;
-            WeeklyVolatility = SetVolatilityData(Symbol)[1][0].Value;
-            MonthlyVolatility = SetVolatilityData(Symbol)[2][0].Value;
-            AnnualVolatility = SetVolatilityData(Symbol)[3][0].Value;
+            ALLVOLATILITIES = SetVolatilityData(Symbol, days);
+            DailyVolatility = ALLVOLATILITIES[0][0].Value;
+            WeeklyVolatility = ALLVOLATILITIES[1][0].Value;
+            MonthlyVolatility = ALLVOLATILITIES[2][0].Value;
+            AnnualVolatility = ALLVOLATILITIES[3][0].Value;
+            XDaysVolatility = ALLVOLATILITIES[4][0].Value;
 
         }
         private async void SetGeneralStockData(string Symbol)
@@ -89,11 +91,11 @@ namespace OptionOptimiser.Objects
             }
         }
 
-        private List<List<KeyValuePair<int, double>>> SetVolatilityData(string Symbol)
+        private List<List<KeyValuePair<int, double>>> SetVolatilityData(string Symbol, int x)
         {
             
             
-             return VolatilityCalculators.GetVolatilityData(Symbol).Result;
+             return VolatilityCalculators.GetVolatilityData(Symbol, x).Result;
             
 
         }
