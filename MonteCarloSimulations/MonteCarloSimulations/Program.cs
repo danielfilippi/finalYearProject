@@ -4,7 +4,7 @@ using ClosedXML.Excel;
 using System.Collections.Generic;
 double todaysPrice = 100;
 double optionPremium = 2;
-double equityRiskPremium = 0.05;
+double equityMarketRiskPremium = 0.05; //https://indialogue.io/clients/reports/public/5d9da61986db2894649a7ef2/5d9da63386db2894649a7ef5
 double stockBeta = 2;
 double RFR = 0.05;
 double expectedStockReturn = RFR + (stockBeta * equityRiskPremium);
