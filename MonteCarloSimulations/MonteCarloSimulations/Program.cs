@@ -14,7 +14,10 @@ double days = 30;
 double dailyVolatility = volatility / Math.Sqrt(252);
 double expDailyReturn = expectedStockReturn /252;
 List<double> simmedValues = new List<double>();
-List<double> payoffs = new List<double>();
+List<double> longCallPayoffs = new List<double>();
+List<double> longPutPayoffs = new List<double>();
+List<double> shortCallPayoffs = new List<double>();
+List<double> shortPutPayoffs = new List<double>();
 double increment = optionPremium * 0.5; // 5% of the option's value
 
 
@@ -49,13 +52,29 @@ Console.WriteLine("\n");
 
 
 
-foreach (double finalV in simmedValues)
+foreach (double finalV in simmedValues) //long call
 {
-    double payoff = finalV - strike - optionPremium;
-    if (payoff < -optionPremium) payoff = -optionPremium;
-    payoffs.Add(payoff);
-    
-  
+    double payoff = Math.Max(0, finalV - strike) - optionPremium; //call
+    if (payoff ==0) payoff = -optionPremium;
+    longCallPayoffs.Add(payoff);
+}
+foreach (double finalV in simmedValues) //long put
+{
+    double payoff = Math.Max(0, strike-finalV) - optionPremium; //put
+    if (payoff ==0) payoff = -optionPremium;
+    longPutPayoffs.Add(payoff);
+}
+foreach (double finalV in simmedValues)//short call
+{
+    double payoff = -(Math.Max(0, finalV - strike) - optionPremium); //negate payoff
+    if (payoff == 0) payoff = optionPremium;  //gain option premium 
+    shortCallPayoffs.Add(payoff);
+}
+foreach (double finalV in simmedValues)//short put
+{
+    double payoff = -(Math.Max(0, strike - finalV) - optionPremium); 
+    if (payoff == 0) payoff = optionPremium; 
+    shortPutPayoffs.Add(payoff);
 }
 
 
