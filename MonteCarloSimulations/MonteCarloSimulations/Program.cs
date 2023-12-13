@@ -3,6 +3,7 @@ using MathNet.Numerics.Distributions;
 using ClosedXML.Excel;
 using System.Collections.Generic;
 double todaysPrice = 100;
+double strike = 95; //remember, this is the price that you can sell the asset at, at expiration
 double optionPremium = 2;
 double equityMarketRiskPremium = 0.05; //https://indialogue.io/clients/reports/public/5d9da61986db2894649a7ef2/5d9da63386db2894649a7ef5
 double stockBeta = 2;
@@ -50,7 +51,7 @@ Console.WriteLine("\n");
 
 foreach (double finalV in simmedValues)
 {
-    double payoff = finalV - todaysPrice - optionPremium;
+    double payoff = finalV - strike - optionPremium;
     if (payoff < -optionPremium) payoff = -optionPremium;
     payoffs.Add(payoff);
     
